@@ -47,8 +47,7 @@ function watchLogs() {
     const content = readNewLogEntries();
     if (content && content.includes('TypeError')) {
       console.log('[!] Detected runtime error, triggering patch...');
-      const response = await require('./patcher').runSurgicalPatch();
-      console.log(response);
+      await require('./patcher').runSurgicalPatch();
     }
   });
 }
