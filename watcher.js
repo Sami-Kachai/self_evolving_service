@@ -1,14 +1,11 @@
+// watcher.js
 const fs = require('fs');
 const logFile = 'app.log';
 const pointerFile = 'app.log.pointer';
 
 function ensureFilesExist() {
-  if (!fs.existsSync(logFile)) {
-    fs.writeFileSync(logFile, '');
-  }
-  if (!fs.existsSync(pointerFile)) {
-    fs.writeFileSync(pointerFile, '0');
-  }
+  if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, '');
+  if (!fs.existsSync(pointerFile)) fs.writeFileSync(pointerFile, '0');
 }
 
 function getLastPointer() {
@@ -40,14 +37,27 @@ function readNewLogEntries() {
   return buffer.toString('utf8');
 }
 
-function watchLogs() {
+function watchLogs({ onPatched } = {}) {
   ensureFilesExist();
 
-  fs.watchFile(logFile, async () => {
+  fs.watchFile(logFile, { interval: 200 }, async () => {
     const content = readNewLogEntries();
-    if (content && content.includes('TypeError')) {
+    if (!content) return;
+
+    if (content.includes('TypeError')) {
       console.log('[!] Detected runtime error, triggering patch...');
-      await require('./patcher').runSurgicalPatch();
+
+      try {
+        const ok = await require('./patcher').runSurgicalPatch();
+        if (ok) {
+          console.log('[✓] Patch applied');
+          if (typeof onPatched === 'function') onPatched();
+        } else {
+          console.log('[x] Patch not applied');
+        }
+      } catch (e) {
+        console.log('[x] Patch flow crashed:', e.message);
+      }
     }
   });
 }

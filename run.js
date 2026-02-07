@@ -1,6 +1,8 @@
 require('dotenv').config();
-const { startServer } = require('./index');
+const { startChild, restartChild } = require('./supervisor');
 const { watchLogs } = require('./watcher');
 
-startServer();
-watchLogs();
+startChild();
+watchLogs({
+  onPatched: () => restartChild('patch applied'),
+});
