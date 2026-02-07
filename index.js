@@ -12,7 +12,7 @@ function logError(err) {
 app.post('/parse', (req, res) => {
   try {
     const data = req.body.data;
-    const upper = data.toUpperCase(); // This will trigger a typeError
+    const upper = data.toUpperCase(); // This will trigger a typeError if {data} is not a string
     res.send({ result: upper });
   } catch (err) {
     logError(err);
@@ -22,7 +22,7 @@ app.post('/parse', (req, res) => {
 
 function startServer() {
   app.listen(serverPort, () =>
-    console.log(`Server running on port ${serverPort}`)
+    console.log(`Server running on port ${serverPort}`),
   );
 }
 
