@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
+const { c, tag } = require('./colors');
 
 function readErrorMessage(logFile = 'app.log') {
   try {
@@ -132,7 +133,9 @@ function replaceFunctionInFile(
     ...originalLines.slice(endLine + 1),
   ];
   fs.writeFileSync(filePath, newLines.join('\n'), 'utf-8');
-  console.log(`Function in ${path.basename(filePath)} successfully patched.`);
+  console.log(
+    `${tag('patcher', c.magenta)} ${c.green('Patched')} ${c.bold(path.basename(filePath))} ${c.dim('(function replaced)')}`,
+  );
 }
 
 function extractFirstCodeBlock(responseText) {
@@ -144,13 +147,16 @@ async function runSurgicalPatch() {
   const errorLine = await readLastError();
   const errorMessage = await readErrorMessage();
   if (!errorLine) {
-    console.log('No error found.');
+    console.log(`${tag('patcher', c.magenta)} ${c.gray('No error found.')}`);
     return false;
   }
 
   const details = parseErrorDetails(errorLine);
   if (!details) {
-    console.log('Could not parse error file/line info.');
+    console.log(
+      `${tag('patcher', c.magenta)} ${c.red('Could not parse error file/line info.')}`,
+    );
+
     return false;
   }
 
@@ -175,8 +181,37 @@ async function runSurgicalPatch() {
     return false;
   }
 
+  printPatchPreview({
+    filePath,
+    startLine,
+    endLine,
+    beforeCode: funcCode,
+    afterCode: fixedFunction || '',
+  });
+  printMiniDiff(funcCode, fixedFunction);
+
+  writeBackup(filePath);
   replaceFunctionInFile(filePath, lines, startLine, endLine, fixedFunction);
   return true;
+}
+
+function printMiniDiff(beforeCode, afterCode, maxLines = 60) {
+  const a = beforeCode.split('\n');
+  const b = afterCode.split('\n');
+  const n = Math.min(Math.max(a.length, b.length), maxLines);
+
+  console.log(c.blue('---------------- MINI DIFF ----------------'));
+  for (let i = 0; i < n; i++) {
+    const aa = a[i] ?? '';
+    const bb = b[i] ?? '';
+    if (aa === bb) continue;
+
+    if (aa) console.log(`${c.red('-')} ${c.red(aa)}`);
+    if (bb) console.log(`${c.green('+')} ${c.green(bb)}`);
+  }
+  if (Math.max(a.length, b.length) > maxLines)
+    console.log(c.yellow('... (diff truncated)'));
+  console.log(c.blue('---------------------------------------------------'));
 }
 
 function isPatchSafe(code) {
@@ -194,6 +229,39 @@ function isPatchSafe(code) {
     'fetch(',
   ];
   return !banned.some((x) => code.includes(x));
+}
+
+function writeBackup(filePath) {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = `${filePath}.bak.${ts}`;
+  fs.copyFileSync(filePath, backupPath);
+  console.log(`[patcher] Backup created: ${backupPath}`);
+}
+
+function preview(code, maxLines = 25) {
+  const lines = code.split('\n');
+  const out = lines.slice(0, maxLines).join('\n');
+  return lines.length > maxLines ? out + '\n...' : out;
+}
+
+function printPatchPreview({
+  filePath,
+  startLine,
+  endLine,
+  beforeCode,
+  afterCode,
+}) {
+  console.log(
+    c.bold(c.blue('\n================ PATCH PREVIEW ================\n')),
+  );
+
+  console.log(`File: ${c.bold(filePath)}`);
+  console.log(`Range: ${c.yellow(`lines ${startLine + 1} to ${endLine + 1}`)}`);
+  console.log(c.blue('-------------- BEFORE --------------'));
+  console.log(c.gray(preview(beforeCode)));
+  console.log(c.green('-------------- AFTER  --------------'));
+  console.log(preview(afterCode));
+  console.log(c.blue('==============================================\n'));
 }
 
 module.exports = {

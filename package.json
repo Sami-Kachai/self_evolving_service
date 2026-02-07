@@ -4,7 +4,9 @@
   "main": "run.js",
   "scripts": {
     "start": "node run.js",
-    "dev": "nodemon run.js"
+    "dev": "nodemon run.js",
+    "reset": "node reset.js",
+    "demo": "npm run reset && node run.js"
   },
   "dependencies": {
     "dotenv": "^16.5.0",

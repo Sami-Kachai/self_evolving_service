@@ -1,7 +1,7 @@
-// watcher.js
 const fs = require('fs');
 const logFile = 'app.log';
 const pointerFile = 'app.log.pointer';
+const { c, tag } = require('./colors');
 
 function ensureFilesExist() {
   if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, '');
@@ -45,18 +45,26 @@ function watchLogs({ onPatched } = {}) {
     if (!content) return;
 
     if (content.includes('TypeError')) {
-      console.log('[!] Detected runtime error, triggering patch...');
+      console.log(
+        `${tag('watcher', c.cyan)} ${c.yellow('Detected runtime error')} ${c.dim('→ triggering patch...')}`,
+      );
 
       try {
         const ok = await require('./patcher').runSurgicalPatch();
         if (ok) {
-          console.log('[✓] Patch applied');
+          console.log(
+            `${tag('patcher', c.magenta)} ${c.green('Patch applied')}`,
+          );
           if (typeof onPatched === 'function') onPatched();
         } else {
-          console.log('[x] Patch not applied');
+          console.log(
+            `${tag('patcher', c.magenta)} ${c.red('Patch not applied')}`,
+          );
         }
       } catch (e) {
-        console.log('[x] Patch flow crashed:', e.message);
+        console.log(
+          `${tag('patcher', c.magenta)} ${c.red('Patch flow crashed:')} ${c.yellow(e.message)}`,
+        );
       }
     }
   });
